@@ -9,8 +9,6 @@ if not exist ..\venv (
     exit /b 1
 )
 
-call ..\venv\Scripts\activate.bat
-
 if not exist credentials.json (
     echo ❌ credentials.json がありません
     echo Google Cloud Consoleから取得してください
@@ -18,6 +16,16 @@ if not exist credentials.json (
     exit /b 1
 )
 
-python setup_youtube_auth.py
+echo YouTube認証を開始します...
+echo 仮想環境のPythonを使用します...
+echo.
+
+REM 仮想環境のPythonを直接指定
+..\venv\Scripts\python.exe setup_youtube_auth.py
+
+if errorlevel 1 (
+    echo.
+    echo ❌ 認証エラーが発生しました
+)
 pause
 

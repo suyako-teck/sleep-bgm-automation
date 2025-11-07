@@ -37,15 +37,26 @@ echo [3/4] 依存関係インストール中...
 REM automationフォルダに戻る
 cd automation
 echo requirements.txtの場所: %CD%\requirements.txt
+echo.
 
-REM 仮想環境を有効化
-call ..\venv\Scripts\activate.bat
+echo 仮想環境のPythonを使用します...
+echo パス: %CD%\..\venv\Scripts\python.exe
+echo.
 
-REM pipアップグレード
-python -m pip install --upgrade pip
+REM pipアップグレード（仮想環境のPythonを直接指定）
+echo pipをアップグレード中...
+..\venv\Scripts\python.exe -m pip install --upgrade pip
 
-REM 依存関係インストール
-pip install -r requirements.txt
+if errorlevel 1 (
+    echo ❌ pipアップグレード失敗
+    pause
+    exit /b 1
+)
+
+echo.
+echo 依存関係をインストール中...
+..\venv\Scripts\pip.exe install -r requirements.txt
+
 if errorlevel 1 (
     echo ❌ インストール失敗
     pause

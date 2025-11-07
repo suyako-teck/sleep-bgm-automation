@@ -14,22 +14,28 @@ if not exist ..\venv (
     exit /b 1
 )
 
-echo 仮想環境を有効化中...
-call ..\venv\Scripts\activate.bat
-
+echo 仮想環境のPythonを使用します...
+echo パス: %CD%\..\venv\Scripts\python.exe
 echo.
+
 echo pipをアップグレード中...
-python -m pip install --upgrade pip
+..\venv\Scripts\python.exe -m pip install --upgrade pip
+
+if errorlevel 1 (
+    echo ❌ pipアップグレード失敗
+    pause
+    exit /b 1
+)
 
 echo.
 echo 既存のパッケージをアンインストール中...
-pip freeze > temp_requirements.txt
-pip uninstall -y -r temp_requirements.txt
+..\venv\Scripts\pip.exe freeze > temp_requirements.txt
+..\venv\Scripts\pip.exe uninstall -y -r temp_requirements.txt
 del temp_requirements.txt
 
 echo.
 echo パッケージを再インストール中...
-pip install -r requirements.txt
+..\venv\Scripts\pip.exe install -r requirements.txt
 
 if errorlevel 1 (
     echo.
@@ -44,7 +50,7 @@ echo ✅ 再インストール完了！
 echo ========================================
 echo.
 echo インストールされたパッケージ:
-pip list
+..\venv\Scripts\pip.exe list
 echo.
 pause
 

@@ -40,31 +40,31 @@ if exist requirements.txt (
 )
 echo.
 
-echo [仮想環境を有効化]
-call ..\venv\Scripts\activate.bat
+echo [仮想環境のPython確認]
+if exist ..\venv\Scripts\python.exe (
+    echo ✅ 仮想環境のPython存在: ..\venv\Scripts\python.exe
+    ..\venv\Scripts\python.exe --version
+) else (
+    echo ❌ 仮想環境のPythonが見つかりません
+)
 echo.
 
-echo [仮想環境内のPython]
-where python
-python --version
+echo [仮想環境内のPython情報]
+..\venv\Scripts\python.exe -c "import sys; print('実行パス:', sys.executable)"
+..\venv\Scripts\python.exe -c "import sys; print('仮想環境:', sys.prefix)"
 echo.
 
 echo [インストール済みパッケージ]
-pip list
-echo.
-
-echo [重要なモジュールの確認]
-python -c "import sys; print('Python実行パス:', sys.executable)"
-python -c "import sys; print('仮想環境:', sys.prefix)"
+..\venv\Scripts\pip.exe list
 echo.
 
 echo [モジュールインポートテスト]
-python -c "import pydub; print('✅ pydub')" 2>&1
-python -c "import moviepy; print('✅ moviepy')" 2>&1
-python -c "import PIL; print('✅ PIL')" 2>&1
-python -c "import yaml; print('✅ yaml')" 2>&1
-python -c "from google.oauth2 import credentials; print('✅ google.oauth2')" 2>&1
-python -c "from googleapiclient import discovery; print('✅ googleapiclient')" 2>&1
+..\venv\Scripts\python.exe -c "import pydub; print('✅ pydub')" 2>&1
+..\venv\Scripts\python.exe -c "import moviepy; print('✅ moviepy')" 2>&1
+..\venv\Scripts\python.exe -c "import PIL; print('✅ PIL')" 2>&1
+..\venv\Scripts\python.exe -c "import yaml; print('✅ yaml')" 2>&1
+..\venv\Scripts\python.exe -c "from google.oauth2 import credentials; print('✅ google.oauth2')" 2>&1
+..\venv\Scripts\python.exe -c "from googleapiclient import discovery; print('✅ googleapiclient')" 2>&1
 echo.
 
 echo [ファイル構造]
