@@ -250,7 +250,10 @@ class ManualModeGUI:
             "シータ波": f"【{duration_label}】シータ波バイノーラル | 深い瞑想・睡眠",
             "風鈴せせらぎ": f"【{duration_label}】風鈴とせせらぎ | 和の癒しBGM",
             "ASMRソフトタッチ": f"【{duration_label}】ASMRソフトタッチ | タッピング音で睡眠",
-            "ささやきガイド": f"【{duration_label}】ささやき睡眠誘導 | 眠りのガイド付き"
+            "ささやきガイド": f"【{duration_label}】ささやき睡眠誘導 | 眠りのガイド付き",
+            "ポモドーロ作業": f"【{duration_label}】ポモドーロ作業BGM | ブラウンノイズで深い集中",
+            "ポモドーロ休憩": f"【{duration_label}】ポモドーロ休憩BGM | 集中力リセット・リフレッシュ音楽",
+            "ポモドーロ長休憩": f"【{duration_label}】ポモドーロ長休憩BGM | 自然音で深いリフレッシュ"
         }
         
         # タイトルを設定

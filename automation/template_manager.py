@@ -51,7 +51,7 @@ class TemplateManager:
             },
             "特殊・ユニーク": {
                 "folder": "special",
-                "templates": ["風鈴せせらぎ", "ASMRソフトタッチ", "ささやきガイド"],
+                "templates": ["風鈴せせらぎ", "ASMRソフトタッチ", "ささやきガイド", "ポモドーロ作業", "ポモドーロ休憩", "ポモドーロ長休憩"],
                 "description": "独特な癒し体験のための特殊音源",
                 "icon": "✨"
             }
