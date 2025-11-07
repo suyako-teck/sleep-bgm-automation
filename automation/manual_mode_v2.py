@@ -132,10 +132,27 @@ class ManualModeGUI:
         self.title_entry = ttk.Entry(settings_frame, width=40)
         self.title_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), pady=3)
         
-        ttk.Label(settings_frame, text="長さ(分):").grid(row=1, column=0, sticky=tk.W)
-        self.duration_entry = ttk.Entry(settings_frame, width=15)
-        self.duration_entry.grid(row=1, column=1, sticky=tk.W, pady=3)
-        self.duration_entry.insert(0, "480")
+        ttk.Label(settings_frame, text="長さ:").grid(row=1, column=0, sticky=tk.W)
+        duration_frame = ttk.Frame(settings_frame)
+        duration_frame.grid(row=1, column=1, sticky=tk.W, pady=3)
+        
+        self.duration_var = tk.StringVar(value="480")
+        duration_options = [
+            ("25分（ポモドーロ）", "25"),
+            ("1時間（短時間作業）", "60"),
+            ("3時間（作業セッション）", "180"),
+            ("5時間（長時間作業）", "300"),
+            ("8時間（睡眠）", "480"),
+            ("10時間（深い睡眠）", "600"),
+            ("12時間（超長時間）", "720")
+        ]
+        
+        duration_combo = ttk.Combobox(duration_frame, textvariable=self.duration_var, width=25, state='readonly')
+        duration_combo['values'] = [f"{label} - {mins}分" for label, mins in duration_options]
+        duration_combo.set("8時間（睡眠） - 480分")
+        duration_combo.pack(side=tk.LEFT)
+        
+        ttk.Label(duration_frame, text="※音源を自動ループ", foreground='gray', font=('Arial', 8)).pack(side=tk.LEFT, padx=5)
         
         settings_frame.columnconfigure(1, weight=1)
         
@@ -256,12 +273,24 @@ class ManualModeGUI:
         self.log("動画生成開始")
         
         try:
+            # 目標時間を取得（コンボボックスから分数を抽出）
+            duration_text = self.duration_var.get()
+            # "8時間（睡眠） - 480分" から "480" を抽出
+            target_minutes = int(duration_text.split(" - ")[1].replace("分", ""))
+            self.log(f"🎯 目標時間: {target_minutes}分")
+            
             processor = AudioProcessor()
             
-            if len(self.audio_files) == 1:
-                final_audio = self.audio_files[0]
-            else:
-                final_audio = processor.process_audio(self.audio_files, 3, 5, 1, -6, f"{self.selected_template}_audio.mp3")
+            # 音源を結合＋ループ処理
+            final_audio = processor.process_audio(
+                self.audio_files, 
+                fade_in=3, 
+                fade_out=5, 
+                crossfade=1, 
+                target_volume=-6, 
+                output_name=f"{self.selected_template}_audio.mp3",
+                target_duration_minutes=target_minutes
+            )
             
             self.log("✓ 音声処理完了")
             

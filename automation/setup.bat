@@ -5,7 +5,11 @@ echo AI音楽BGM自動化ツール - セットアップ
 echo ========================================
 echo.
 
+REM このバッチファイルのディレクトリに移動
 cd /d "%~dp0"
+
+echo 現在のディレクトリ: %CD%
+echo.
 
 echo [1/4] Pythonバージョン確認...
 python --version
@@ -18,19 +22,29 @@ echo ✓ Python検出
 echo.
 
 echo [2/4] 仮想環境作成中...
+REM 親ディレクトリ（sleep/）に移動
 cd ..
+echo 仮想環境作成場所: %CD%\venv
 if exist venv (
     echo ✓ 既存の仮想環境を使用
 ) else (
     python -m venv venv
     echo ✓ 仮想環境作成完了
 )
-cd 02_自動化ツール
 echo.
 
 echo [3/4] 依存関係インストール中...
+REM automationフォルダに戻る
+cd automation
+echo requirements.txtの場所: %CD%\requirements.txt
+
+REM 仮想環境を有効化
 call ..\venv\Scripts\activate.bat
+
+REM pipアップグレード
 python -m pip install --upgrade pip
+
+REM 依存関係インストール
 pip install -r requirements.txt
 if errorlevel 1 (
     echo ❌ インストール失敗
