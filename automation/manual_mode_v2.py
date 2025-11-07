@@ -485,7 +485,163 @@ class ManualModeGUI:
                 self.upload_video()
 
 
+def check_requirements():
+    """起動前の必須ファイル・環境チェック"""
+    print("=" * 70)
+    print("🔍 起動前チェック")
+    print("=" * 70)
+    print()
+    
+    issues = []
+    warnings = []
+    
+    # 1. Pythonモジュールチェック
+    print("📦 Pythonモジュールチェック:")
+    required_modules = [
+        ('pydub', 'pydub'),
+        ('moviepy', 'moviepy.editor'),
+        ('PIL', 'Pillow'),
+        ('google.oauth2', 'google-auth-oauthlib'),
+        ('googleapiclient', 'google-api-python-client'),
+        ('yaml', 'pyyaml')
+    ]
+    
+    for display_name, module_name in required_modules:
+        try:
+            __import__(module_name if '.' not in module_name else module_name.split('.')[0])
+            print(f"  ✅ {display_name}")
+        except ImportError:
+            print(f"  ❌ {display_name} - インストールが必要")
+            issues.append(f"{display_name}がインストールされていません")
+    print()
+    
+    # 2. テンプレートフォルダチェック
+    print("📁 テンプレートフォルダチェック:")
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    template_dir = os.path.join(parent_dir, "templates")
+    
+    if os.path.exists(template_dir):
+        print(f"  ✅ templates/ フォルダ検出")
+        
+        # カテゴリフォルダチェック
+        categories = ["noise", "nature", "fire", "piano", "ambient", "special"]
+        template_count = 0
+        
+        for category in categories:
+            category_path = os.path.join(template_dir, category)
+            if os.path.exists(category_path):
+                md_files = [f for f in os.listdir(category_path) if f.endswith('.md') and f != 'README.md']
+                template_count += len(md_files)
+                print(f"    ├─ {category}/ ({len(md_files)}個)")
+            else:
+                warnings.append(f"カテゴリフォルダ {category}/ が見つかりません")
+        
+        print(f"  📊 合計: {template_count}個のテンプレート")
+    else:
+        print(f"  ❌ templates/ フォルダが見つかりません")
+        issues.append("templatesフォルダが存在しません")
+    print()
+    
+    # 3. 出力フォルダチェック
+    print("📂 作業フォルダチェック:")
+    automation_dir = os.path.dirname(os.path.abspath(__file__))
+    output_dir = os.path.join(automation_dir, "output")
+    
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"  ✅ output/ フォルダ作成")
+    else:
+        print(f"  ✅ output/ フォルダ存在")
+    print()
+    
+    # 4. YouTube認証ファイルチェック
+    print("🔐 YouTube API認証チェック:")
+    credentials_path = os.path.join(automation_dir, "credentials.json")
+    token_path = os.path.join(automation_dir, "token.json")
+    
+    if os.path.exists(credentials_path):
+        print(f"  ✅ credentials.json 存在")
+    else:
+        print(f"  ⚠️  credentials.json なし")
+        warnings.append("credentials.json が見つかりません（YouTube機能が使えません）")
+    
+    if os.path.exists(token_path):
+        print(f"  ✅ token.json 存在（認証済み）")
+    else:
+        print(f"  ⚠️  token.json なし（初回認証が必要）")
+        if os.path.exists(credentials_path):
+            warnings.append("auth.bat を実行してYouTube認証を完了してください")
+    print()
+    
+    # 5. ffmpegチェック（分割エクスポート用）
+    print("🎬 ffmpegチェック:")
+    try:
+        import subprocess
+        result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0:
+            version_line = result.stdout.split('\n')[0]
+            print(f"  ✅ ffmpeg インストール済み")
+            print(f"     {version_line}")
+        else:
+            print(f"  ❌ ffmpeg が正常に動作しません")
+            warnings.append("ffmpeg が正常に動作しません（4時間以上の動画生成に影響）")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        print(f"  ⚠️  ffmpeg が見つかりません")
+        warnings.append("ffmpeg未インストール（4時間以上の動画生成時に必要）")
+    print()
+    
+    # 結果サマリー
+    print("=" * 70)
+    if issues:
+        print("❌ 致命的な問題が見つかりました:")
+        for issue in issues:
+            print(f"  • {issue}")
+        print()
+        print("解決方法:")
+        print("  1. setup.bat を実行してください")
+        print("  2. 問題が解決しない場合は README.md を確認してください")
+        print("=" * 70)
+        return False
+    
+    elif warnings:
+        print("⚠️  警告がありますが、起動は可能です:")
+        for warning in warnings:
+            print(f"  • {warning}")
+        print()
+        print("推奨対応:")
+        if "credentials.json" in str(warnings):
+            print("  • YouTube機能を使う場合は credentials.json を配置してください")
+            print("    詳細: README.md の「YouTube API設定」を参照")
+        if "auth.bat" in str(warnings):
+            print("  • auth.bat を実行してYouTube認証を完了してください")
+        if "ffmpeg" in str(warnings):
+            print("  • 4時間以上の動画を作る場合は ffmpeg をインストールしてください")
+            print("    https://ffmpeg.org/download.html")
+        print("=" * 70)
+        
+        # 警告のみの場合は続行確認
+        response = input("\n続行しますか? (y/n): ")
+        if response.lower() != 'y':
+            return False
+    
+    else:
+        print("✅ すべてのチェックに合格しました！")
+        print("=" * 70)
+    
+    print()
+    return True
+
+
 def main():
+    # 起動前チェック
+    if not check_requirements():
+        print("\n終了します。")
+        input("Enterキーで閉じます...")
+        return
+    
+    print("🚀 GUIを起動中...")
+    print()
+    
     root = tk.Tk()
     app = ManualModeGUI(root)
     root.mainloop()
