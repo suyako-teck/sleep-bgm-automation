@@ -82,7 +82,55 @@ manual.bat
 | **debug.bat** | トラブル診断 | 30秒 |
 | **reinstall.bat** | 再インストール | 2分 |
 
-詳細: [QUICKSTART.md](QUICKSTART.md)
+詳細: [START_HERE.txt](START_HERE.txt)、[docs/QUICKSTART.md](docs/QUICKSTART.md)
+
+---
+
+## 📁 フォルダ構成
+
+```
+automation/
+│
+├─【⭐ 実行ファイル】ダブルクリックで使う
+│  ├─ manual.bat              動画作成GUI起動
+│  ├─ setup.bat               初回セットアップ
+│  ├─ test.bat                総合テスト
+│  ├─ auth.bat                YouTube認証
+│  ├─ benchmark.bat           性能測定
+│  └─ reinstall.bat           再インストール
+│
+├─【プログラム本体】
+│  ├─ manual_mode_v2.py       GUIアプリケーション
+│  ├─ template_manager.py     テンプレート管理
+│  └─ modules/                処理モジュール
+│     ├─ audio_processor.py   音声編集
+│     ├─ video_creator.py     動画生成
+│     ├─ youtube_uploader.py  アップロード
+│     └─ metadata_generator.py メタデータ
+│
+├─【ドキュメント】
+│  └─ docs/
+│     ├─ QUICKSTART.md           5分で始めるガイド
+│     ├─ TROUBLESHOOTING.md      トラブル対処法
+│     ├─ PERFORMANCE.md          高速化ガイド
+│     ├─ AMD_GPU_SETUP.md        AMD GPU設定
+│     └─ 使い方.txt              重要事項
+│
+├─【テスト・診断ツール】
+│  └─ tests/
+│     ├─ auto_test.py            総合テスト
+│     ├─ benchmark.py            ベンチマーク
+│     ├─ test_amd_gpu.bat        AMD GPU確認
+│     ├─ debug.bat               デバッグ情報
+│     └─ check_global_python.bat 環境チェック
+│
+└─【出力・設定】
+   ├─ output/                生成された動画
+   ├─ backgrounds/           背景画像
+   ├─ requirements.txt       依存関係
+   ├─ credentials.json       YouTube API
+   └─ token.json             認証トークン
+```
 
 ---
 

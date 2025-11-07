@@ -21,7 +21,7 @@ echo 仮想環境のPythonを使用します...
 echo.
 
 REM 仮想環境のPythonを直接指定
-..\venv\Scripts\python.exe setup_youtube_auth.py
+..\venv\Scripts\python.exe scripts\setup_youtube_auth.py
 
 if errorlevel 1 (
     echo.
