@@ -508,18 +508,26 @@ def check_requirements():
     print("📦 Pythonモジュールチェック:")
     required_modules = [
         ('pydub', 'pydub'),
-        ('moviepy', 'moviepy.editor'),
-        ('PIL', 'Pillow'),
-        ('google.oauth2', 'google-auth-oauthlib'),
-        ('googleapiclient', 'google-api-python-client'),
-        ('yaml', 'pyyaml')
+        ('moviepy', 'moviepy'),
+        ('PIL (Pillow)', 'PIL'),
+        ('google.oauth2', 'google.oauth2'),
+        ('googleapiclient', 'googleapiclient'),
+        ('yaml (PyYAML)', 'yaml')
     ]
     
-    for display_name, module_name in required_modules:
+    for display_name, import_name in required_modules:
         try:
-            __import__(module_name if '.' not in module_name else module_name.split('.')[0])
+            # モジュール名をそのままインポート
+            if '.' in import_name:
+                # サブモジュールの場合は親モジュールからインポート
+                parts = import_name.split('.')
+                module = __import__(import_name)
+                for part in parts[1:]:
+                    module = getattr(module, part)
+            else:
+                __import__(import_name)
             print(f"  ✅ {display_name}")
-        except ImportError:
+        except (ImportError, AttributeError) as e:
             print(f"  ❌ {display_name} - インストールが必要")
             issues.append(f"{display_name}がインストールされていません")
     print()
