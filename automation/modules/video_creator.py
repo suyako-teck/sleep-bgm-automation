@@ -61,16 +61,42 @@ class VideoCreator:
         if encode_params['gpu']:
             logger.info(f"  - GPU高速化: 有効 ({encode_params['gpu']})")
         
-        video.write_videofile(
-            output_path,
-            fps=fps,
-            codec=encode_params['codec'],
-            audio_codec='aac',
-            preset=encode_params['preset'],
-            bitrate=encode_params['bitrate'],
-            threads=encode_params['threads'],
-            logger=None
-        )
+        # エンコード実行（エラー時はフォールバック）
+        try:
+            video.write_videofile(
+                output_path,
+                fps=fps,
+                codec=encode_params['codec'],
+                audio_codec='aac',
+                preset=encode_params['preset'],
+                bitrate=encode_params['bitrate'],
+                threads=encode_params['threads'],
+                logger=None
+            )
+        except Exception as e:
+            error_msg = str(e)
+            
+            # GPUエンコードエラーの場合、CPUにフォールバック
+            if 'nvenc' in error_msg.lower() or 'nvcuda' in error_msg.lower() or \
+               'amf' in error_msg.lower() or 'qsv' in error_msg.lower():
+                logger.warning(f"⚠️ GPUエンコードエラー: CPUにフォールバック")
+                logger.info(f"💻 CPUエンコード（libx264）で再試行...")
+                
+                # CPUエンコードで再試行
+                video.write_videofile(
+                    output_path,
+                    fps=fps,
+                    codec='libx264',
+                    audio_codec='aac',
+                    preset=encode_params['preset'],
+                    bitrate=encode_params['bitrate'],
+                    threads=encode_params['threads'],
+                    logger=None
+                )
+                logger.info(f"✓ CPUエンコードで完了")
+            else:
+                # その他のエラーは再スロー
+                raise
         
         logger.info(f"✓ 動画生成完了: {output_path}")
         return output_path
@@ -113,7 +139,7 @@ class VideoCreator:
         return params
     
     def _detect_gpu_encoder(self):
-        """利用可能なGPUエンコーダーを検出"""
+        """利用可能なGPUエンコーダーを検出（実動作確認付き）"""
         import subprocess
         
         try:
@@ -127,20 +153,30 @@ class VideoCreator:
             
             encoders = result.stdout.lower()
             
+            # 検出された各エンコーダーを実際にテスト
             # NVIDIA GPU (NVENC)
             if 'h264_nvenc' in encoders:
-                logger.info("🎮 NVIDIA GPU検出: NVENCエンコーダー使用")
-                return 'h264_nvenc'
+                if self._test_encoder('h264_nvenc'):
+                    logger.info("🎮 NVIDIA GPU検出: NVENCエンコーダー使用")
+                    return 'h264_nvenc'
+                else:
+                    logger.warning("⚠️ NVENCエンコーダーは利用不可（ドライバー問題）")
             
             # AMD GPU (AMF)
             if 'h264_amf' in encoders:
-                logger.info("🎮 AMD GPU検出: AMFエンコーダー使用")
-                return 'h264_amf'
+                if self._test_encoder('h264_amf'):
+                    logger.info("🎮 AMD GPU検出: AMFエンコーダー使用")
+                    return 'h264_amf'
+                else:
+                    logger.warning("⚠️ AMFエンコーダーは利用不可")
             
             # Intel GPU (QuickSync)
             if 'h264_qsv' in encoders:
-                logger.info("🎮 Intel GPU検出: QuickSyncエンコーダー使用")
-                return 'h264_qsv'
+                if self._test_encoder('h264_qsv'):
+                    logger.info("🎮 Intel GPU検出: QuickSyncエンコーダー使用")
+                    return 'h264_qsv'
+                else:
+                    logger.warning("⚠️ QuickSyncエンコーダーは利用不可")
             
             logger.info("💻 GPU未検出: CPUエンコード使用")
             return None
@@ -148,6 +184,39 @@ class VideoCreator:
         except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
             logger.warning(f"⚠️ GPUチェック失敗: CPUエンコード使用")
             return None
+    
+    def _test_encoder(self, encoder_name):
+        """エンコーダーが実際に動作するかテスト"""
+        import subprocess
+        import tempfile
+        
+        try:
+            # 1秒の簡単なテスト動画を生成
+            test_output = os.path.join(tempfile.gettempdir(), "test_encode.mp4")
+            
+            cmd = [
+                'ffmpeg', '-y',
+                '-f', 'lavfi', '-i', 'color=c=black:s=320x240:d=1',
+                '-c:v', encoder_name,
+                '-t', '1',
+                test_output
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, timeout=10)
+            
+            # ファイルが生成されたか確認
+            success = result.returncode == 0 and os.path.exists(test_output)
+            
+            # テストファイル削除
+            try:
+                os.remove(test_output)
+            except:
+                pass
+            
+            return success
+            
+        except Exception:
+            return False
     
     def _create_default_background(self, resolution):
         """デフォルト背景生成"""
