@@ -11,6 +11,9 @@ import logging
 import tempfile
 from datetime import datetime
 
+# 親ディレクトリをパスに追加（tests/からautomation/のモジュールをインポートするため）
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # ログ設定
 logging.basicConfig(
     level=logging.INFO,
