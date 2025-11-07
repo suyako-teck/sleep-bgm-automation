@@ -119,16 +119,22 @@ class VideoCreator:
         }
         
         # 長尺動画の最適化（4時間以上）
-        if duration_hours >= 4:
-            params['preset'] = 'fast'  # 高速化優先
-            params['bitrate'] = '3000k'  # ビットレート削減
-            logger.info(f"🚀 長尺動画最適化: 高速エンコード有効")
-        
-        # 超長尺動画の最適化（8時間以上）
-        elif duration_hours >= 8:
-            params['preset'] = 'veryfast'  # さらに高速化
+        if duration_hours >= 8:
+            # 8時間以上
+            if gpu_codec == 'h264_amf':
+                params['preset'] = 'speed'  # AMF用プリセット
+            else:
+                params['preset'] = 'veryfast'
             params['bitrate'] = '2500k'
             logger.info(f"🚀 超長尺動画最適化: 超高速エンコード有効")
+        elif duration_hours >= 4:
+            # 4〜8時間
+            if gpu_codec == 'h264_amf':
+                params['preset'] = 'balanced'  # AMF用プリセット
+            else:
+                params['preset'] = 'fast'
+            params['bitrate'] = '3000k'
+            logger.info(f"🚀 長尺動画最適化: 高速エンコード有効")
         
         # 高解像度の最適化
         if pixels >= 2073600:  # 1920x1080以上
