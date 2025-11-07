@@ -405,6 +405,9 @@ class AutoTester:
         """ファイル構造テスト"""
         self.print_header("📂 10. ファイル構造テスト")
         
+        # automation/ディレクトリに移動
+        automation_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
         required_files = [
             "manual_mode_v2.py",
             "template_manager.py",
@@ -419,19 +422,28 @@ class AutoTester:
         ]
         
         for file in required_files:
-            if os.path.exists(file):
+            file_path = os.path.join(automation_dir, file)
+            if os.path.exists(file_path):
                 self.test_result(file, True)
             else:
                 self.test_result(file, False, "ファイルが見つかりません")
         
-        # templatesフォルダ
-        parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        template_dir = os.path.join(parent_dir, "templates")
+        # templatesフォルダ（automation/の親ディレクトリ = sleep/）
+        sleep_dir = os.path.dirname(automation_dir)
+        template_dir = os.path.join(sleep_dir, "templates")
         
         if os.path.exists(template_dir):
-            self.test_result("../templates/ フォルダ", True)
+            # テンプレート数をカウント
+            template_count = 0
+            for category in ["noise", "nature", "fire", "piano", "ambient", "special"]:
+                category_path = os.path.join(template_dir, category)
+                if os.path.exists(category_path):
+                    md_files = [f for f in os.listdir(category_path) if f.endswith('.md') and f != 'README.md']
+                    template_count += len(md_files)
+            
+            self.test_result(f"templates/ フォルダ ({template_count}個のテンプレート)", True)
         else:
-            self.test_result("../templates/ フォルダ", False, "テンプレートフォルダがありません")
+            self.test_result("templates/ フォルダ", False, "テンプレートフォルダがありません")
     
     def run_all_tests(self):
         """全テスト実行"""
