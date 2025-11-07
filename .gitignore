@@ -1,0 +1,48 @@
+# 仮想環境
+venv/
+env/
+ENV/
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 環境変数・認証情報
+.env
+credentials.json
+token.json
+*.pickle
+
+# 出力ファイル
+automation/output/
+automation/temp/
+automation/backgrounds/*.png
+automation/backgrounds/*.jpg
+
+# ログファイル
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 個人情報を含む可能性のあるファイル
+automation/configs/*.yaml
+
+# 作業ファイル
+復旧手順.txt
+reorganize.bat
+reorganize_simple.bat
+ダウンローダー*.code-workspace
+
