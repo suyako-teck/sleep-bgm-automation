@@ -492,6 +492,15 @@ def check_requirements():
     print("=" * 70)
     print()
     
+    # 仮想環境チェック
+    import sys
+    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+        print(f"✅ 仮想環境で実行中: {sys.prefix}")
+    else:
+        print(f"⚠️  グローバルPythonで実行中: {sys.prefix}")
+        print(f"   manual.bat から起動してください")
+    print()
+    
     issues = []
     warnings = []
     
