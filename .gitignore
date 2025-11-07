@@ -22,6 +22,10 @@ automation/output/
 automation/temp/
 automation/backgrounds/*.png
 automation/backgrounds/*.jpg
+automation/*.mp4
+automation/*.mp3
+automation/*.wav
+automation/*TEMP_MPY*
 
 # ログファイル
 *.log

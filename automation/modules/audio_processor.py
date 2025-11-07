@@ -4,9 +4,15 @@
 
 import os
 import logging
+import multiprocessing
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from pydub import AudioSegment
 
 logger = logging.getLogger(__name__)
+
+# CPU最適化
+CPU_COUNT = multiprocessing.cpu_count()
+logger.info(f"💻 CPU: {CPU_COUNT}コア検出")
 
 
 class AudioProcessor:
@@ -17,25 +23,20 @@ class AudioProcessor:
         os.makedirs(self.output_dir, exist_ok=True)
         
     def process_audio(self, segments, fade_in, fade_out, crossfade, target_volume, output_name="final_audio.mp3", target_duration_minutes=None):
-        """複数音源を結合（target_duration_minutesが指定されていれば自動ループ）"""
+        """複数音源を結合（並列処理で高速化）"""
         logger.info(f"🔧 {len(segments)}個の音源を結合...")
         
-        combined = AudioSegment.empty()
+        # 並列で音源を読み込み・処理（高速化）
+        if len(segments) > 3:
+            logger.info(f"⚡ 並列処理モード: {min(CPU_COUNT, len(segments))}スレッド")
+            processed_segments = self._parallel_load_and_process(segments, target_volume, fade_in)
+        else:
+            processed_segments = self._sequential_load_and_process(segments, target_volume, fade_in)
         
-        # 全音源を結合
-        for i, segment_path in enumerate(segments):
-            audio = AudioSegment.from_file(segment_path)
-            
-            # 音量調整
-            current_db = audio.dBFS
-            gain = target_volume - current_db
-            audio = audio.apply_gain(gain)
-            
-            if i == 0:
-                audio = audio.fade_in(fade_in * 1000)
-                combined = audio
-            else:
-                combined = combined.append(audio, crossfade=crossfade * 1000)
+        # 結合
+        combined = processed_segments[0]
+        for audio in processed_segments[1:]:
+            combined = combined.append(audio, crossfade=crossfade * 1000)
         
         # 目標時間が指定されている場合、ループ処理
         if target_duration_minutes:
@@ -102,6 +103,66 @@ class AudioProcessor:
         logger.info(f"✓ 音声処理完了: {output_path} ({final_duration_minutes:.1f}分)")
         return output_path
     
+    def _load_and_process_segment(self, args):
+        """単一音源の読み込みと処理（並列処理用）"""
+        segment_path, target_volume, fade_in, index = args
+        
+        try:
+            audio = AudioSegment.from_file(segment_path)
+            
+            # 音量調整
+            current_db = audio.dBFS
+            gain = target_volume - current_db
+            audio = audio.apply_gain(gain)
+            
+            # 最初の音源のみフェードイン
+            if index == 0:
+                audio = audio.fade_in(fade_in * 1000)
+            
+            return (index, audio)
+        except Exception as e:
+            logger.error(f"❌ 音源読み込みエラー [{segment_path}]: {e}")
+            return (index, None)
+    
+    def _parallel_load_and_process(self, segments, target_volume, fade_in):
+        """並列で音源を読み込み・処理"""
+        max_workers = min(CPU_COUNT, len(segments))
+        
+        # 引数を準備
+        args_list = [(seg, target_volume, fade_in, i) for i, seg in enumerate(segments)]
+        
+        # 並列処理
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(self._load_and_process_segment, args_list))
+        
+        # インデックス順にソート
+        results.sort(key=lambda x: x[0])
+        
+        # Noneを除外
+        processed = [audio for idx, audio in results if audio is not None]
+        
+        logger.info(f"✓ 並列読み込み完了: {len(processed)}/{len(segments)}個")
+        return processed
+    
+    def _sequential_load_and_process(self, segments, target_volume, fade_in):
+        """逐次処理（音源が少ない場合）"""
+        processed = []
+        
+        for i, segment_path in enumerate(segments):
+            audio = AudioSegment.from_file(segment_path)
+            
+            # 音量調整
+            current_db = audio.dBFS
+            gain = target_volume - current_db
+            audio = audio.apply_gain(gain)
+            
+            if i == 0:
+                audio = audio.fade_in(fade_in * 1000)
+            
+            processed.append(audio)
+        
+        return processed
+    
     def _export_long_audio(self, audio_segment, output_path, bitrate, duration_minutes):
         """超長尺音源を分割してエクスポート"""
         import tempfile
@@ -118,19 +179,29 @@ class AudioProcessor:
         temp_dir = tempfile.gettempdir()
         
         try:
-            # 各チャンクをエクスポート
-            for i in range(num_chunks):
-                start_ms = i * chunk_duration_ms
-                end_ms = min((i + 1) * chunk_duration_ms, total_duration_ms)
-                
+            # 並列でチャンクをエクスポート（高速化）
+            def export_chunk(args):
+                i, start_ms, end_ms = args
                 chunk = audio_segment[start_ms:end_ms]
                 temp_file = os.path.join(temp_dir, f"chunk_{i:03d}.mp3")
-                
-                # MP3に直接エクスポート（WAV経由を回避）
                 chunk.export(temp_file, format="mp3", bitrate=bitrate, parameters=["-q:a", "2"])
-                temp_files.append(temp_file)
-                
-                logger.info(f"    → チャンク {i+1}/{num_chunks} 完了")
+                return temp_file
+            
+            # チャンク情報を準備
+            chunk_args = [
+                (i, i * chunk_duration_ms, min((i + 1) * chunk_duration_ms, total_duration_ms))
+                for i in range(num_chunks)
+            ]
+            
+            # 並列エクスポート
+            max_workers = min(CPU_COUNT, num_chunks)
+            logger.info(f"  ⚡ 並列エクスポート: {max_workers}スレッド")
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                temp_files = list(executor.map(export_chunk, chunk_args))
+                for i, _ in enumerate(temp_files):
+                    if (i + 1) % 4 == 0 or i == len(temp_files) - 1:
+                        logger.info(f"    → チャンク {i+1}/{num_chunks} 完了")
             
             # ffmpegで結合
             logger.info(f"  🔗 チャンクを結合中...")
