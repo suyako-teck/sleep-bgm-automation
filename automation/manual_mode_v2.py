@@ -150,6 +150,7 @@ class ManualModeGUI:
         duration_combo = ttk.Combobox(duration_frame, textvariable=self.duration_var, width=25, state='readonly')
         duration_combo['values'] = [f"{label} - {mins}分" for label, mins in duration_options]
         duration_combo.set("8時間（睡眠） - 480分")
+        duration_combo.bind('<<ComboboxSelected>>', lambda e: self._on_duration_change())
         duration_combo.pack(side=tk.LEFT)
         
         ttk.Label(duration_frame, text="※音源を自動ループ", foreground='gray', font=('Arial', 8)).pack(side=tk.LEFT, padx=5)
@@ -205,14 +206,66 @@ class ManualModeGUI:
         self.prompt_text.delete(1.0, tk.END)
         self.prompt_text.insert(1.0, info['prompt'])
         
-        self.title_entry.delete(0, tk.END)
-        self.title_entry.insert(0, info['title_example'])
+        # タイトルを自動生成
+        self._update_title()
         
         self.config['tags'] = info['tags']
         
         self.checklist_vars['step1'].set(True)
         self.update_progress()
         self.status_var.set(f"{template_name} - Mubertで音源生成してください")
+    
+    def _update_title(self):
+        """選択されたテンプレートと時間からタイトルを自動生成"""
+        if not self.selected_template:
+            return
+        
+        # 時間を取得
+        duration_text = self.duration_var.get()
+        # "8時間（睡眠） - 480分" から "8時間" を抽出
+        if " - " in duration_text:
+            duration_label = duration_text.split(" - ")[0]
+        else:
+            duration_label = duration_text
+        
+        # タイトルパターン
+        template_titles = {
+            "ピンクノイズ": f"【{duration_label}】ピンクノイズで深い眠り | 睡眠導入・集中力アップ",
+            "ホワイトノイズ": f"【{duration_label}】ホワイトノイズで快適な睡眠 | 赤ちゃんの寝かしつけにも",
+            "ブラウンノイズ": f"【{duration_label}】ブラウンノイズで深い集中 | 勉強・作業用BGM",
+            "雨音": f"【{duration_label}】雨の音でリラックス | 睡眠・作業用BGM",
+            "水音": f"【{duration_label}】小川のせせらぎ | 自然音で癒しの時間",
+            "森": f"【{duration_label}】森の音 | 鳥のさえずりで目覚める朝",
+            "海辺": f"【{duration_label}】波の音でリラックス | 睡眠・瞑想用BGM",
+            "森の夜": f"【{duration_label}】森の夜 | 虫の音で深い眠り",
+            "自然": f"【{duration_label}】自然の音 | リラックス・睡眠用BGM",
+            "炎": f"【{duration_label}】暖炉の音 | 焚き火のパチパチ音で癒し",
+            "雨焚火": f"【{duration_label}】雨音と焚き火 | 究極の癒しBGM",
+            "ピアノ": f"【{duration_label}】静かなピアノ曲 | 睡眠・作業用BGM",
+            "自然ピアノ": f"【{duration_label}】ピアノと自然音 | 癒しの音楽",
+            "子守歌": f"【{duration_label}】優しい子守歌 | 赤ちゃんの寝かしつけ",
+            "雨窓ローファイ": f"【{duration_label}】Lo-fi × 雨音 | 作業・勉強用BGM",
+            "アンビエント": f"【{duration_label}】アンビエント音楽 | 瞑想・睡眠用",
+            "星空ドローン": f"【{duration_label}】星空ドローン | 宇宙的な癒しの音",
+            "シータ波": f"【{duration_label}】シータ波バイノーラル | 深い瞑想・睡眠",
+            "風鈴せせらぎ": f"【{duration_label}】風鈴とせせらぎ | 和の癒しBGM",
+            "ASMRソフトタッチ": f"【{duration_label}】ASMRソフトタッチ | タッピング音で睡眠",
+            "ささやきガイド": f"【{duration_label}】ささやき睡眠誘導 | 眠りのガイド付き"
+        }
+        
+        # タイトルを設定
+        title = template_titles.get(self.selected_template, f"【{duration_label}】{self.selected_template} | 睡眠・リラックス用BGM")
+        
+        self.title_entry.delete(0, tk.END)
+        self.title_entry.insert(0, title)
+        
+        self.log(f"📝 タイトル自動生成: {title}")
+    
+    def _on_duration_change(self):
+        """長さ変更時にタイトルを更新"""
+        if self.selected_template:
+            self._update_title()
+            self.log(f"⏱️ 長さ変更: {self.duration_var.get()}")
     
     def open_mubert(self):
         """Mubertサイトを開く"""
@@ -269,15 +322,27 @@ class ManualModeGUI:
             return
         
         self.status_var.set("🎬 動画生成中...")
-        self.log("=" * 50)
-        self.log("動画生成開始")
+        self.log("=" * 70)
+        self.log("🎬 動画生成開始")
+        self.log("=" * 70)
         
         try:
+            # 設定情報をログ出力
+            self.log(f"📋 設定情報:")
+            self.log(f"  ├─ テンプレート: {self.selected_template}")
+            self.log(f"  ├─ タイトル: {self.title_entry.get()}")
+            self.log(f"  ├─ 形式: {'ショート動画' if self.video_type.get() == 'short' else 'ロング動画'}")
+            self.log(f"  └─ 音源数: {len(self.audio_files)}個")
+            self.log("")
+            
             # 目標時間を取得（コンボボックスから分数を抽出）
             duration_text = self.duration_var.get()
             # "8時間（睡眠） - 480分" から "480" を抽出
             target_minutes = int(duration_text.split(" - ")[1].replace("分", ""))
-            self.log(f"🎯 目標時間: {target_minutes}分")
+            self.log(f"⏱️ 目標時間: {target_minutes}分 ({target_minutes/60:.1f}時間)")
+            self.log("")
+            
+            self.log("🔊 音声処理を開始...")
             
             processor = AudioProcessor()
             
@@ -292,26 +357,40 @@ class ManualModeGUI:
                 target_duration_minutes=target_minutes
             )
             
-            self.log("✓ 音声処理完了")
+            self.log("")
+            self.log("✅ 音声処理完了")
+            self.log("")
             
+            self.log("🎥 動画生成を開始...")
             creator = VideoCreator()
             
             is_short = self.video_type.get() == "short"
             resolution = (1080, 1920) if is_short else (1920, 1080)
             output_name = f"{'short' if is_short else 'long'}_{self.selected_template}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
             
+            self.log(f"  ├─ 解像度: {resolution[0]}x{resolution[1]}")
+            self.log(f"  ├─ FPS: 30")
+            self.log(f"  └─ 出力ファイル: {output_name}")
+            self.log("")
+            
             video_path = creator.create_video(final_audio, None, resolution, 30, self.title_entry.get(), "", output_name)
             
             self.config['video_path'] = video_path
             self.generated_long_video = video_path
             
-            self.log(f"✓ 動画完成: {os.path.basename(video_path)}")
+            self.log("")
+            self.log("✅ 動画生成完了")
+            self.log(f"📁 保存先: {os.path.abspath(video_path)}")
+            self.log(f"📊 ファイルサイズ: {os.path.getsize(video_path) / (1024**3):.2f} GB")
+            self.log("")
+            self.log("=" * 70)
+            
             self.status_var.set("✅ 動画生成完了")
             
             self.checklist_vars['step7'].set(True)
             self.update_progress()
             
-            if messagebox.askyesno("完了", f"動画生成完了\n\nフォルダを開きますか？"):
+            if messagebox.askyesno("完了", f"動画生成完了\n\n{os.path.basename(video_path)}\n\nフォルダを開きますか？"):
                 os.startfile(os.path.dirname(os.path.abspath(video_path)))
             
         except Exception as e:
@@ -328,8 +407,15 @@ class ManualModeGUI:
             self.config['video_path'] = file
         
         self.status_var.set("📤 アップロード中...")
-        self.log("=" * 50)
-        self.log("アップロード開始")
+        self.log("")
+        self.log("=" * 70)
+        self.log("📤 YouTubeアップロード開始")
+        self.log("=" * 70)
+        self.log("")
+        self.log(f"📹 動画: {os.path.basename(self.config['video_path'])}")
+        self.log(f"📝 タイトル: {self.title_entry.get()}")
+        self.log("")
+        self.log("🔐 YouTube認証中...")
         
         try:
             uploader = YouTubeUploader()
@@ -351,11 +437,27 @@ class ManualModeGUI:
 #sleep #relaxing #bgm #作業用BGM #睡眠導入
 """
             
+            self.log("✅ 認証成功")
+            self.log("")
+            self.log("📤 アップロード実行中...")
+            self.log("  （進捗は別ウィンドウで確認してください）")
+            self.log("")
+            
             video_id = uploader.upload_video(self.config['video_path'], self.title_entry.get(), description, tags[:15], 10, 'public')
             
             url = f"https://www.youtube.com/watch?v={video_id}"
-            self.log(f"✅ アップロード完了")
-            self.log(f"🔗 {url}")
+            
+            self.log("")
+            self.log("=" * 70)
+            self.log("✅ YouTubeアップロード完了")
+            self.log("=" * 70)
+            self.log("")
+            self.log(f"🎬 動画ID: {video_id}")
+            self.log(f"🔗 URL: {url}")
+            self.log(f"📊 タグ数: {len(tags[:15])}個")
+            self.log("")
+            self.log("✅ URLをクリップボードにコピーしました")
+            self.log("")
             
             self.root.clipboard_clear()
             self.root.clipboard_append(url)
@@ -364,7 +466,7 @@ class ManualModeGUI:
             self.checklist_vars['step8'].set(True)
             self.update_progress()
             
-            messagebox.showinfo("完了", f"アップロード完了！\n\n{url}\n\nURLコピー済み")
+            messagebox.showinfo("完了", f"アップロード完了！\n\n動画ID: {video_id}\n\n{url}\n\nURLをクリップボードにコピーしました")
             
         except Exception as e:
             self.log(f"❌ エラー: {e}")
